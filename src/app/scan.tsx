@@ -88,7 +88,7 @@ export default function Scan() {
 
     const scannedProduct = lookupState.status === 'success' ? lookupState.product : undefined;
     const grade = scannedProduct?.nutrition_grades ?? scannedProduct?.nutriscore_data?.grade;
-    const verdict = getHealthVerdict(grade);
+    const verdict = getHealthVerdict(scannedProduct);
 
     return (
         <SafeAreaView style={styles.screen}>
@@ -156,7 +156,7 @@ export default function Scan() {
                             ]}>
                             <Text style={styles.verdictText}>{verdict.toUpperCase()}</Text>
                         </View>
-                        <Text style={styles.resultText}>{getHealthReason(grade)}</Text>
+                        <Text style={styles.resultText}>{getHealthReason(scannedProduct)}</Text>
                         <Text style={styles.metaText}>
                             Nutri-Score: {grade ? grade.toUpperCase() : 'N/A'}
                             {scannedProduct?.nova_group ? ` | NOVA ${scannedProduct.nova_group}` : ''}
