@@ -1,5 +1,9 @@
 {
   "expo": {
+    "scheme": "foodDetective",
+    "experiments": {
+      "typedRoutes": true
+    },
     "name": "food-detective",
     "slug": "food-detective",
     "version": "1.0.0",
@@ -23,6 +27,17 @@
       "edgeToEdgeEnabled": true,
       "predictiveBackGestureEnabled": false
     },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow Food Detective to scan product barcodes.",
+          "barcodeScannerEnabled": true,
+          "recordAudioAndroid": false
+        }
+      ],
+      "expo-router"
+    ],
     "web": {
       "favicon": "./assets/favicon.png"
     }
