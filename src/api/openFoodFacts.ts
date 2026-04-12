@@ -27,6 +27,18 @@ type OpenFoodFactsResponse = {
   status_verbose: string;
 };
 
+export type ProductLookupErrorCode = 'open_food_facts_unavailable' | 'product_not_found';
+
+export class ProductLookupError extends Error {
+  constructor(
+    public readonly code: ProductLookupErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ProductLookupError';
+  }
+}
+
 const PRODUCT_FIELDS = [
   'product_name',
   'brands',
@@ -40,19 +52,26 @@ const PRODUCT_FIELDS = [
   'quantity',
 ].join(',');
 
-export async function fetchProductByBarcode(barcode: string): Promise<OpenFoodFactsProduct> {
+export async function fetchProductByBarcode(
+  barcode: string,
+  language: string,
+): Promise<OpenFoodFactsProduct> {
   const response = await fetch(
-    `https://world.openfoodfacts.net/api/v2/product/${barcode}?fields=${PRODUCT_FIELDS}`,
+    `https://world.openfoodfacts.net/api/v2/product/${barcode}?fields=${PRODUCT_FIELDS}&lc=${language}`,
   );
 
+  //TODO: Error mapping
   if (!response.ok) {
-    throw new Error('Open Food Facts is unavailable right now.');
+    throw new ProductLookupError(
+      'open_food_facts_unavailable',
+      'Open Food Facts is unavailable right now.',
+    );
   }
 
   const payload = (await response.json()) as OpenFoodFactsResponse;
 
   if (payload.status !== 1 || !payload.product) {
-    throw new Error('Product not found in Open Food Facts.');
+    throw new ProductLookupError('product_not_found', 'Product not found in Open Food Facts.');
   }
 
   return {

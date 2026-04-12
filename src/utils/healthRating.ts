@@ -1,4 +1,5 @@
 import type { OpenFoodFactsProduct } from '@/api/openFoodFacts';
+import type { TFunction } from 'i18next';
 
 type HealthVerdict = 'healthy' | 'not healthy' | 'unknown';
 
@@ -6,7 +7,7 @@ type HealthAnalysis = {
   grade?: string;
   hasSugarInFirstFive: boolean | null;
   hasLowFiberRatio: boolean | null;
-  proteinIntake: string | null;
+  proteinIntake: 'high' | 'medium' | 'low' | null;
 };
 
 const SUGAR_PATTERNS = [
@@ -69,8 +70,8 @@ function normalizeIngredientName(ingredient: string): string {
   return ingredient
     .toLowerCase()
     .replace(/\([^)]*\)/g, ' ')
-    .replace(/\[[^\]]*]/g, ' ')
-    .replace(/\{[^}]*\}/g, ' ')
+    .replace(/\[[^]]*]/g, ' ')
+    .replace(/\{[^}]*}/g, ' ')
     .replace(/\d+([.,]\d+)?\s*%/g, ' ')
     .replace(/[_*]/g, ' ')
     .replace(/\s+/g, ' ')
@@ -116,7 +117,7 @@ function hasLowFiberToCarbRatio(product?: OpenFoodFactsProduct): boolean | null 
   return fiber < carbohydrates / 5;
 }
 
-function proteinIntake(product?: OpenFoodFactsProduct): string | null {
+function proteinIntake(product?: OpenFoodFactsProduct): 'high' | 'medium' | 'low' | null {
   const proteins = product?.nutriments?.proteins_100g;
 
   if (typeof proteins !== 'number') {
@@ -124,12 +125,11 @@ function proteinIntake(product?: OpenFoodFactsProduct): string | null {
   }
 
   if (proteins > 10) {
-    return "Nice protein intake."
+    return 'high';
   } else if (proteins < 10 && proteins >= 5) {
-    return "Medium protein intake."
+    return 'medium';
   }
-  return "Low protein intake."
-
+  return 'low';
 }
 
 function analyzeHealth(product?: OpenFoodFactsProduct): HealthAnalysis {
@@ -139,7 +139,7 @@ function analyzeHealth(product?: OpenFoodFactsProduct): HealthAnalysis {
     grade: grade?.toLowerCase(),
     hasSugarInFirstFive: hasSugarInFirstFiveIngredients(product),
     hasLowFiberRatio: hasLowFiberToCarbRatio(product),
-    proteinIntake: proteinIntake(product)
+    proteinIntake: proteinIntake(product),
   };
 }
 
@@ -161,38 +161,44 @@ export function getHealthVerdict(product?: OpenFoodFactsProduct): HealthVerdict 
   return 'not healthy';
 }
 
-export function getHealthReason(product?: OpenFoodFactsProduct): string {
+export function getHealthReason(product: OpenFoodFactsProduct | undefined, t: TFunction): string {
   const { grade, hasSugarInFirstFive, hasLowFiberRatio, proteinIntake } = analyzeHealth(product);
   const reasons: string[] = [];
 
   if (grade) {
     reasons.push(
       grade === 'a' || grade === 'b'
-        ? `Nutri-Score ${grade.toUpperCase()} is treated as healthy.`
-        : `Nutri-Score ${grade.toUpperCase()} is treated as not healthy.`,
+        ? t('health.gradeHealthy', { grade: grade.toUpperCase() })
+        : t('health.gradeNotHealthy', { grade: grade.toUpperCase() }),
     );
   } else {
-    reasons.push('No Nutri-Score is available for this product yet.');
+    reasons.push(t('health.noGrade'));
   }
 
   if (hasSugarInFirstFive === true) {
-    reasons.push('A sugar source appears in the first 5 ingredients.');
+    reasons.push(t('health.sugarPresent'));
   } else if (hasSugarInFirstFive === false) {
-    reasons.push('No sugar source appears in the first 5 ingredients.');
+    reasons.push(t('health.sugarAbsent'));
   } else {
-    reasons.push('Ingredients are unavailable, so sugar placement could not be checked.');
+    reasons.push(t('health.sugarUnavailable'));
   }
 
   if (hasLowFiberRatio === true) {
-    reasons.push('Fiber is below 1g per 5g of carbohydrates.');
+    reasons.push(t('health.fiberLow'));
   } else if (hasLowFiberRatio === false) {
-    reasons.push('Fiber meets or exceeds 1g per 5g of carbohydrates.');
+    reasons.push(t('health.fiberOk'));
   } else {
-    reasons.push('Fiber and carbohydrate data are unavailable for the fiber check.');
+    reasons.push(t('health.fiberUnavailable'));
   }
 
   if (proteinIntake != null) {
-    reasons.push(proteinIntake);
+    reasons.push(
+      proteinIntake === 'high'
+        ? t('health.proteinHigh')
+        : proteinIntake === 'medium'
+          ? t('health.proteinMedium')
+          : t('health.proteinLow'),
+    );
   }
 
   return reasons.join(' ');

@@ -1,26 +1,29 @@
 import { Link } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
+import { useTranslation } from 'react-i18next';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 export default function Home() {
+  const { t } = useTranslation();
+
   return (
     <SafeAreaView style={styles.screen}>
       <View style={styles.hero}>
-        <Text style={styles.eyebrow}>Food Detective</Text>
-        <Text style={styles.title}>Scan packaged foods and get a quick health read before you buy.</Text>
+        <Text style={styles.eyebrow}>{t('home.eyebrow')}</Text>
+        <Text style={styles.title}>{t('home.title')}</Text>
         <Text style={styles.description}>
-          Use the barcode scanner to identify products, fetch data from Open Food Facts, and see a simple verdict based on the available nutrition score.
+          {t('home.description')}
         </Text>
       </View>
 
       <View style={styles.card}>
-        <Text style={styles.cardTitle}>How it works</Text>
-        <Text style={styles.cardText}>Point your camera at a product barcode and let the app look up the item for you.</Text>
-        <Text style={styles.cardText}>Once found, Food Detective highlights the product name, brand, and an easy-to-read health verdict.</Text>
+        <Text style={styles.cardTitle}>{t('home.cardTitle')}</Text>
+        <Text style={styles.cardText}>{t('home.cardTextPrimary')}</Text>
+        <Text style={styles.cardText}>{t('home.cardTextSecondary')}</Text>
 
         <Link href="/scan" style={styles.primaryButton}>
-          Start scanning
+          {t('home.startScanning')}
         </Link>
       </View>
 
