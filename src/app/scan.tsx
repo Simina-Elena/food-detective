@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Image,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -105,97 +106,101 @@ export default function Scan() {
         <Text style={styles.title}>{t('scan.header.title')}</Text>
       </View>
 
-      <View style={styles.cameraCard}>
-        <CameraView
-          style={styles.camera}
-          facing="back"
-          onBarcodeScanned={hasScanned ? undefined : handleBarcodeScanned}
-          barcodeScannerSettings={{ barcodeTypes: SCANNABLE_TYPES }}
-        />
-        <View pointerEvents="none" style={styles.scanOverlay}>
-          <View style={styles.scanFrame} />
-          <Text style={styles.scanHint}>{t('scan.camera.alignHint')}</Text>
+      {!hasScanned && (
+        <View style={styles.cameraCard}>
+          <CameraView
+            style={styles.camera}
+            facing="back"
+            onBarcodeScanned={handleBarcodeScanned}
+            barcodeScannerSettings={{ barcodeTypes: SCANNABLE_TYPES }}
+          />
+          <View pointerEvents="none" style={styles.scanOverlay}>
+            <View style={styles.scanFrame} />
+            <Text style={styles.scanHint}>{t('scan.camera.alignHint')}</Text>
+          </View>
         </View>
-      </View>
+      )}
 
       <View style={styles.resultCard}>
-        {lookupState.status === 'idle' && (
-          <>
-            <Text style={styles.resultTitle}>{t('scan.result.readyTitle')}</Text>
-            <Text style={styles.resultText}>{t('scan.result.readyText')}</Text>
-          </>
-        )}
+        <ScrollView contentContainerStyle={styles.resultContent} showsVerticalScrollIndicator={false}>
+          {lookupState.status === 'idle' && (
+            <>
+              <Text style={styles.resultTitle}>{t('scan.result.readyTitle')}</Text>
+              <Text style={styles.resultText}>{t('scan.result.readyText')}</Text>
+            </>
+          )}
 
-        {lookupState.status === 'loading' && (
-          <>
-            <ActivityIndicator size="small" color="#114b5f" />
-            <Text style={styles.resultTitle}>{t('scan.result.checkingTitle')}</Text>
-            <Text style={styles.resultText}>
-              {t('scan.result.barcodeLabel')}: {lookupState.barcode}
-            </Text>
-          </>
-        )}
-
-        {lookupState.status === 'error' && (
-          <>
-            <Text style={styles.resultTitle}>{t('scan.result.noResultTitle')}</Text>
-            <Text style={styles.resultText}>{lookupState.message}</Text>
-            <Pressable onPress={resetScanner} style={styles.secondaryButton}>
-              <Text style={styles.secondaryButtonText}>{t('scan.result.scanAnotherProduct')}</Text>
-            </Pressable>
-          </>
-        )}
-
-        {lookupState.status === 'success' && (
-          <>
-            {scannedProduct?.image_front_small_url ? (
-              <Image source={{ uri: scannedProduct.image_front_small_url }} style={styles.productImage} />
-            ) : null}
-            <Text style={styles.resultTitle}>
-              {scannedProduct?.product_name || t('scan.result.unnamedProduct')}
-            </Text>
-            <Text style={styles.resultText}>
-              {scannedProduct?.brands || t('scan.result.unknownBrand')}
-              {scannedProduct?.quantity ? ` | ${scannedProduct.quantity}` : ''}
-            </Text>
-            <View
-              style={[
-                styles.verdictPill,
-                verdict === 'healthy'
-                  ? styles.verdictHealthy
-                  : verdict === 'not healthy'
-                    ? styles.verdictNotHealthy
-                    : styles.verdictUnknown,
-              ]}>
-              <Text style={styles.verdictText}>
-                {t(
-                  verdict === 'healthy'
-                    ? 'scan.result.verdict.healthy'
-                    : verdict === 'not healthy'
-                      ? 'scan.result.verdict.notHealthy'
-                      : 'scan.result.verdict.unknown',
-                ).toUpperCase()}
+          {lookupState.status === 'loading' && (
+            <>
+              <ActivityIndicator size="small" color="#114b5f" />
+              <Text style={styles.resultTitle}>{t('scan.result.checkingTitle')}</Text>
+              <Text style={styles.resultText}>
+                {t('scan.result.barcodeLabel')}: {lookupState.barcode}
               </Text>
-            </View>
-            <Text style={styles.resultText}>{getHealthReason(scannedProduct, t)}</Text>
-            <Text style={styles.metaText}>
-              {[
-                `${t('scan.result.nutriScoreLabel')}: ${
-                  grade ? grade.toUpperCase() : t('scan.result.notAvailable')
-                }`,
-                scannedProduct?.nova_group
-                  ? t('scan.result.novaLabel', { group: scannedProduct.nova_group })
-                  : null,
-                `${t('scan.result.barcodeLabel')}: ${lookupState.barcode}`,
-              ]
-                .filter(Boolean)
-                .join(' | ')}
-            </Text>
-            <Pressable onPress={resetScanner} style={styles.primaryButton}>
-              <Text style={styles.primaryButtonText}>{t('scan.result.scanAnotherProduct')}</Text>
-            </Pressable>
-          </>
-        )}
+            </>
+          )}
+
+          {lookupState.status === 'error' && (
+            <>
+              <Text style={styles.resultTitle}>{t('scan.result.noResultTitle')}</Text>
+              <Text style={styles.resultText}>{lookupState.message}</Text>
+              <Pressable onPress={resetScanner} style={styles.secondaryButton}>
+                <Text style={styles.secondaryButtonText}>{t('scan.result.scanAnotherProduct')}</Text>
+              </Pressable>
+            </>
+          )}
+
+          {lookupState.status === 'success' && (
+            <>
+              {scannedProduct?.image_front_small_url ? (
+                <Image source={{ uri: scannedProduct.image_front_small_url }} style={styles.productImage} />
+              ) : null}
+              <Text style={styles.resultTitle}>
+                {scannedProduct?.product_name || t('scan.result.unnamedProduct')}
+              </Text>
+              <Text style={styles.resultText}>
+                {scannedProduct?.brands || t('scan.result.unknownBrand')}
+                {scannedProduct?.quantity ? ` | ${scannedProduct.quantity}` : ''}
+              </Text>
+              <View
+                style={[
+                  styles.verdictPill,
+                  verdict === 'healthy'
+                    ? styles.verdictHealthy
+                    : verdict === 'not healthy'
+                      ? styles.verdictNotHealthy
+                      : styles.verdictUnknown,
+                ]}>
+                <Text style={styles.verdictText}>
+                  {t(
+                    verdict === 'healthy'
+                      ? 'scan.result.verdict.healthy'
+                      : verdict === 'not healthy'
+                        ? 'scan.result.verdict.notHealthy'
+                        : 'scan.result.verdict.unknown',
+                  ).toUpperCase()}
+                </Text>
+              </View>
+              <Text style={styles.resultText}>{getHealthReason(scannedProduct, t)}</Text>
+              <Text style={styles.metaText}>
+                {[
+                  `${t('scan.result.nutriScoreLabel')}: ${
+                    grade ? grade.toUpperCase() : t('scan.result.notAvailable')
+                  }`,
+                  scannedProduct?.nova_group
+                    ? t('scan.result.novaLabel', { group: scannedProduct.nova_group })
+                    : null,
+                  `${t('scan.result.barcodeLabel')}: ${lookupState.barcode}`,
+                ]
+                  .filter(Boolean)
+                  .join(' | ')}
+              </Text>
+              <Pressable onPress={resetScanner} style={styles.primaryButton}>
+                <Text style={styles.primaryButtonText}>{t('scan.result.scanAnotherProduct')}</Text>
+              </Pressable>
+            </>
+          )}
+        </ScrollView>
       </View>
 
       <StatusBar style="dark" />
@@ -289,10 +294,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   resultCard: {
+    flex: 1,
     backgroundColor: '#fffaf2',
     borderRadius: 24,
     padding: 18,
+  },
+  resultContent: {
     gap: 12,
+    paddingBottom: 4,
   },
   resultTitle: {
     color: '#0c1b1f',
