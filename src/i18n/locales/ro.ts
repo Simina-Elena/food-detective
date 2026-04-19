@@ -60,6 +60,8 @@ const ro = {
     fiberLow: 'Fibrele sunt sub 1g la fiecare 5g de carbohidrati.',
     fiberOk: 'Fibrele ating sau depasesc 1g la fiecare 5g de carbohidrati.',
     fiberUnavailable: 'Datele despre fibre si carbohidrati nu sunt disponibile pentru aceasta verificare.',
+    wholeGrainMismatch:
+      'Mesajul de tip integral pare inconsistent cu ordinea ingredientelor: faina rafinata apare inaintea fainei integrale.',
     proteinHigh: 'Aport bun de proteine.',
     proteinMedium: 'Aport mediu de proteine.',
     proteinLow: 'Aport scazut de proteine.',

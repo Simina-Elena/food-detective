@@ -60,6 +60,8 @@ const en = {
     fiberLow: 'Fiber is below 1g per 5g of carbohydrates.',
     fiberOk: 'Fiber meets or exceeds 1g per 5g of carbohydrates.',
     fiberUnavailable: 'Fiber and carbohydrate data are unavailable for the fiber check.',
+    wholeGrainMismatch:
+      'Whole grain marketing appears inconsistent with the ingredient order: refined flour shows up before whole grain flour.',
     proteinHigh: 'Nice protein intake.',
     proteinMedium: 'Medium protein intake.',
     proteinLow: 'Low protein intake.',
