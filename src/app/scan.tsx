@@ -17,14 +17,13 @@ import {
 } from 'expo-camera';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-
 import {
   fetchProductByBarcode,
   ProductLookupError,
   type OpenFoodFactsProduct,
 } from '@/api/openFoodFacts';
 import { getCurrentLanguage } from '@/i18n';
-import { getHealthReason, getHealthVerdict } from '@/utils/healthRating';
+import { getCoachRecommendation, getHealthChecks } from '@/utils/healthRating';
 
 type LookupState =
     | { status: 'idle' }
@@ -97,7 +96,8 @@ export default function Scan() {
 
   const scannedProduct = lookupState.status === 'success' ? lookupState.product : undefined;
   const grade = scannedProduct?.nutrition_grades ?? scannedProduct?.nutriscore_data?.grade;
-  const verdict = getHealthVerdict(scannedProduct);
+  const recommendation = getCoachRecommendation(scannedProduct, t);
+  const healthChecks = getHealthChecks(scannedProduct, t);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -152,36 +152,62 @@ export default function Scan() {
 
           {lookupState.status === 'success' && (
             <>
-              {scannedProduct?.image_front_small_url ? (
-                <Image source={{ uri: scannedProduct.image_front_small_url }} style={styles.productImage} />
-              ) : null}
-              <Text style={styles.resultTitle}>
-                {scannedProduct?.product_name || t('scan.result.unnamedProduct')}
-              </Text>
-              <Text style={styles.resultText}>
-                {scannedProduct?.brands || t('scan.result.unknownBrand')}
-                {scannedProduct?.quantity ? ` | ${scannedProduct.quantity}` : ''}
-              </Text>
+              <View style={styles.productHeader}>
+                {scannedProduct?.image_front_small_url ? (
+                  <Image source={{ uri: scannedProduct.image_front_small_url }} style={styles.productImage} />
+                ) : null}
+                <View style={styles.productText}>
+                  <Text style={styles.resultTitle}>
+                    {scannedProduct?.product_name || t('scan.result.unnamedProduct')}
+                  </Text>
+                  <Text style={styles.resultText}>
+                    {scannedProduct?.brands || t('scan.result.unknownBrand')}
+                    {scannedProduct?.quantity ? ` | ${scannedProduct.quantity}` : ''}
+                  </Text>
+                </View>
+              </View>
+
               <View
                 style={[
-                  styles.verdictPill,
-                  verdict === 'healthy'
-                    ? styles.verdictHealthy
-                    : verdict === 'not healthy'
-                      ? styles.verdictNotHealthy
-                      : styles.verdictUnknown,
+                  styles.coachNote,
+                  recommendation.level === 'good_match'
+                    ? styles.coachGood
+                    : recommendation.level === 'compare'
+                      ? styles.coachCompare
+                      : recommendation.level === 'occasional'
+                        ? styles.coachOccasional
+                        : styles.coachUnknown,
                 ]}>
-                <Text style={styles.verdictText}>
-                  {t(
-                    verdict === 'healthy'
-                      ? 'scan.result.verdict.healthy'
-                      : verdict === 'not healthy'
-                        ? 'scan.result.verdict.notHealthy'
-                        : 'scan.result.verdict.unknown',
-                  ).toUpperCase()}
-                </Text>
+                <Text style={styles.coachLabel}>{t('coach.title')}</Text>
+                <Text style={styles.coachTitle}>{recommendation.title}</Text>
+                <Text style={styles.coachText}>{recommendation.body}</Text>
+                <Text style={styles.coachAction}>{recommendation.action}</Text>
               </View>
-              <Text style={styles.resultText}>{getHealthReason(scannedProduct, t)}</Text>
+
+              <View style={styles.checkSection}>
+                <Text style={styles.sectionTitle}>{t('scan.result.checksTitle')}</Text>
+                {healthChecks.map((check) => (
+                  <View key={check.label} style={styles.checkItem}>
+                    <View
+                      style={[
+                        styles.checkMarker,
+                        check.state === 'positive'
+                          ? styles.checkPositive
+                          : check.state === 'caution'
+                            ? styles.checkCaution
+                            : check.state === 'negative'
+                              ? styles.checkNegative
+                              : styles.checkUnknown,
+                      ]}
+                    />
+                    <View style={styles.checkTextGroup}>
+                      <Text style={styles.checkLabel}>{check.label}</Text>
+                      <Text style={styles.checkDetail}>{check.detail}</Text>
+                    </View>
+                  </View>
+                ))}
+              </View>
+
               <Text style={styles.metaText}>
                 {[
                   `${t('scan.result.nutriScoreLabel')}: ${
@@ -211,7 +237,7 @@ export default function Scan() {
 const styles = StyleSheet.create({
   screen: {
     flex: 1,
-    backgroundColor: '#f3efe7',
+    backgroundColor: '#f7f4ed',
     paddingHorizontal: 18,
     paddingBottom: 18,
     gap: 16,
@@ -220,17 +246,19 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#f3efe7',
+    backgroundColor: '#f7f4ed',
   },
   permissionScreen: {
     flex: 1,
-    backgroundColor: '#f3efe7',
+    backgroundColor: '#f7f4ed',
     padding: 20,
     justifyContent: 'center',
   },
   permissionCard: {
-    backgroundColor: '#fffaf2',
-    borderRadius: 24,
+    backgroundColor: '#ffffff',
+    borderColor: '#e4ddd1',
+    borderWidth: 1,
+    borderRadius: 8,
     padding: 24,
     gap: 14,
   },
@@ -239,35 +267,35 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   eyebrow: {
-    color: '#114b5f',
+    color: '#1f6f5b',
     fontSize: 15,
     fontWeight: '700',
     textTransform: 'uppercase',
-    letterSpacing: 1.2,
+    letterSpacing: 0,
   },
   title: {
-    color: '#0c1b1f',
+    color: '#17211f',
     fontSize: 28,
     fontWeight: '800',
     lineHeight: 34,
   },
   permissionTitle: {
-    color: '#0c1b1f',
+    color: '#17211f',
     fontSize: 28,
     fontWeight: '800',
     lineHeight: 34,
   },
   permissionText: {
-    color: '#4d5d63',
+    color: '#52625e',
     fontSize: 15,
     lineHeight: 22,
   },
   cameraCard: {
     flex: 1,
     minHeight: 320,
-    borderRadius: 28,
+    borderRadius: 8,
     overflow: 'hidden',
-    backgroundColor: '#0c1b1f',
+    backgroundColor: '#17211f',
     position: 'relative',
   },
   camera: {
@@ -277,26 +305,28 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: 'rgba(12, 27, 31, 0.18)',
+    backgroundColor: 'rgba(23, 33, 31, 0.18)',
     gap: 18,
   },
   scanFrame: {
     width: '76%',
     height: 140,
-    borderRadius: 22,
+    borderRadius: 8,
     borderWidth: 3,
-    borderColor: '#f3efe7',
+    borderColor: '#f7f4ed',
     backgroundColor: 'transparent',
   },
   scanHint: {
-    color: '#fffaf2',
+    color: '#ffffff',
     fontSize: 14,
     fontWeight: '600',
   },
   resultCard: {
     flex: 1,
-    backgroundColor: '#fffaf2',
-    borderRadius: 24,
+    backgroundColor: '#ffffff',
+    borderColor: '#e4ddd1',
+    borderWidth: 1,
+    borderRadius: 8,
     padding: 18,
   },
   resultContent: {
@@ -304,51 +334,134 @@ const styles = StyleSheet.create({
     paddingBottom: 4,
   },
   resultTitle: {
-    color: '#0c1b1f',
-    fontSize: 24,
+    color: '#17211f',
+    fontSize: 22,
     fontWeight: '800',
   },
   resultText: {
-    color: '#41535a',
+    color: '#52625e',
     fontSize: 15,
     lineHeight: 22,
   },
   metaText: {
-    color: '#68787d',
+    color: '#72766f',
     fontSize: 13,
     lineHeight: 18,
   },
   productImage: {
-    width: 72,
-    height: 72,
-    borderRadius: 16,
-    backgroundColor: '#ece5d8',
+    width: 78,
+    height: 78,
+    borderRadius: 8,
+    backgroundColor: '#ebe5da',
   },
-  verdictPill: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 999,
+  productHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
-  verdictHealthy: {
-    backgroundColor: '#d7f5df',
+  productText: {
+    flex: 1,
+    gap: 4,
   },
-  verdictNotHealthy: {
-    backgroundColor: '#ffd9d2',
+  coachNote: {
+    borderLeftWidth: 4,
+    borderRadius: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    gap: 6,
   },
-  verdictUnknown: {
-    backgroundColor: '#ece5d8',
+  coachGood: {
+    backgroundColor: '#edf8e8',
+    borderLeftColor: '#4c9a5b',
   },
-  verdictText: {
-    color: '#0c1b1f',
+  coachCompare: {
+    backgroundColor: '#fff7db',
+    borderLeftColor: '#e6a700',
+  },
+  coachOccasional: {
+    backgroundColor: '#fff0e8',
+    borderLeftColor: '#d56a3a',
+  },
+  coachUnknown: {
+    backgroundColor: '#f1f1ed',
+    borderLeftColor: '#8b8f84',
+  },
+  coachLabel: {
+    color: '#52625e',
     fontSize: 13,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0,
+  },
+  coachTitle: {
+    color: '#17211f',
+    fontSize: 20,
     fontWeight: '800',
-    letterSpacing: 0.8,
+    lineHeight: 25,
+  },
+  coachText: {
+    color: '#4b5653',
+    fontSize: 15,
+    lineHeight: 22,
+  },
+  coachAction: {
+    color: '#17211f',
+    fontSize: 15,
+    fontWeight: '700',
+    lineHeight: 22,
+  },
+  checkSection: {
+    borderTopColor: '#e4ddd1',
+    borderTopWidth: 1,
+    paddingTop: 12,
+    gap: 10,
+  },
+  sectionTitle: {
+    color: '#17211f',
+    fontSize: 17,
+    fontWeight: '800',
+  },
+  checkItem: {
+    flexDirection: 'row',
+    gap: 10,
+    alignItems: 'flex-start',
+  },
+  checkMarker: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    marginTop: 6,
+  },
+  checkPositive: {
+    backgroundColor: '#4c9a5b',
+  },
+  checkCaution: {
+    backgroundColor: '#e6a700',
+  },
+  checkNegative: {
+    backgroundColor: '#d56a3a',
+  },
+  checkUnknown: {
+    backgroundColor: '#8b8f84',
+  },
+  checkTextGroup: {
+    flex: 1,
+    gap: 2,
+  },
+  checkLabel: {
+    color: '#17211f',
+    fontSize: 15,
+    fontWeight: '800',
+  },
+  checkDetail: {
+    color: '#52625e',
+    fontSize: 14,
+    lineHeight: 20,
   },
   primaryButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#114b5f',
-    borderRadius: 999,
+    backgroundColor: '#1f6f5b',
+    borderRadius: 8,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
@@ -359,13 +472,13 @@ const styles = StyleSheet.create({
   },
   secondaryButton: {
     alignSelf: 'flex-start',
-    backgroundColor: '#ece5d8',
-    borderRadius: 999,
+    backgroundColor: '#ebe5da',
+    borderRadius: 8,
     paddingHorizontal: 18,
     paddingVertical: 12,
   },
   secondaryButtonText: {
-    color: '#0c1b1f',
+    color: '#17211f',
     fontSize: 15,
     fontWeight: '700',
   },

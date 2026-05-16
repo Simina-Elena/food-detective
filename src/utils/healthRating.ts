@@ -2,6 +2,8 @@ import type { OpenFoodFactsProduct } from '@/api/openFoodFacts';
 import type { TFunction } from 'i18next';
 
 type HealthVerdict = 'healthy' | 'not healthy' | 'unknown';
+type CoachRecommendationLevel = 'good_match' | 'compare' | 'occasional' | 'unknown';
+type HealthCheckState = 'positive' | 'caution' | 'negative' | 'unknown';
 
 type HealthAnalysis = {
   grade?: string;
@@ -9,6 +11,19 @@ type HealthAnalysis = {
   hasLowFiberRatio: boolean | null;
   hasWholeGrainMismatch: boolean | null;
   proteinIntake: 'high' | 'medium' | 'low' | null;
+};
+
+export type CoachRecommendation = {
+  level: CoachRecommendationLevel;
+  title: string;
+  body: string;
+  action: string;
+};
+
+export type HealthCheck = {
+  label: string;
+  detail: string;
+  state: HealthCheckState;
 };
 
 const SUGAR_PATTERNS = [
@@ -162,7 +177,6 @@ function hasWholeGrainMarketingMismatch(product?: OpenFoodFactsProduct): boolean
     firstFiveIngredients,
     REFINED_FLOUR_PATTERNS,
   );
-  console.log(firstRefinedFlourIndex,firstWholeGrainFlourIndex )
 
   if (firstRefinedFlourIndex === -1) {
     return false;
@@ -238,6 +252,143 @@ export function getHealthVerdict(product?: OpenFoodFactsProduct): HealthVerdict 
   }
 
   return 'not healthy';
+}
+
+export function getCoachRecommendation(
+  product: OpenFoodFactsProduct | undefined,
+  t: TFunction,
+): CoachRecommendation {
+  const analysis = analyzeHealth(product);
+  const verdict = getHealthVerdict(product);
+  const redFlagCount = [
+    analysis.hasSugarInFirstFive,
+    analysis.hasLowFiberRatio,
+    analysis.hasWholeGrainMismatch,
+  ].filter((check) => check === true).length;
+
+  if (verdict === 'healthy') {
+    return {
+      level: 'good_match',
+      title: t('coach.recommendation.good.title'),
+      body: t('coach.recommendation.good.body'),
+      action: t('coach.recommendation.good.action'),
+    };
+  }
+
+  if (verdict === 'unknown') {
+    return {
+      level: 'unknown',
+      title: t('coach.recommendation.unknown.title'),
+      body: t('coach.recommendation.unknown.body'),
+      action: t('coach.recommendation.unknown.action'),
+    };
+  }
+
+  if (analysis.grade === 'd' || analysis.grade === 'e' || redFlagCount >= 2) {
+    return {
+      level: 'occasional',
+      title: t('coach.recommendation.occasional.title'),
+      body: t('coach.recommendation.occasional.body'),
+      action: t('coach.recommendation.occasional.action'),
+    };
+  }
+
+  return {
+    level: 'compare',
+    title: t('coach.recommendation.compare.title'),
+    body: t('coach.recommendation.compare.body'),
+    action: t('coach.recommendation.compare.action'),
+  };
+}
+
+export function getHealthChecks(
+  product: OpenFoodFactsProduct | undefined,
+  t: TFunction,
+): HealthCheck[] {
+  const { grade, hasSugarInFirstFive, hasLowFiberRatio, hasWholeGrainMismatch, proteinIntake } =
+    analyzeHealth(product);
+  const novaGroup = product?.nova_group;
+  const checks: HealthCheck[] = [];
+
+  checks.push({
+    label: t('health.checks.nutriScore.label'),
+    detail: grade
+      ? t('health.checks.nutriScore.detail', { grade: grade.toUpperCase() })
+      : t('health.noGrade'),
+    state: grade ? (grade === 'a' || grade === 'b' ? 'positive' : grade === 'c' ? 'caution' : 'negative') : 'unknown',
+  });
+
+  checks.push({
+    label: t('health.checks.sugar.label'),
+    detail:
+      hasSugarInFirstFive === true
+        ? t('health.sugarPresent')
+        : hasSugarInFirstFive === false
+          ? t('health.sugarAbsent')
+          : t('health.sugarUnavailable'),
+    state:
+      hasSugarInFirstFive === true
+        ? 'negative'
+        : hasSugarInFirstFive === false
+          ? 'positive'
+          : 'unknown',
+  });
+
+  checks.push({
+    label: t('health.checks.fiber.label'),
+    detail:
+      hasLowFiberRatio === true
+        ? t('health.fiberLow')
+        : hasLowFiberRatio === false
+          ? t('health.fiberOk')
+          : t('health.fiberUnavailable'),
+    state:
+      hasLowFiberRatio === true ? 'caution' : hasLowFiberRatio === false ? 'positive' : 'unknown',
+  });
+
+  if (hasWholeGrainMismatch === true) {
+    checks.push({
+      label: t('health.checks.wholeGrain.label'),
+      detail: t('health.wholeGrainMismatch'),
+      state: 'negative',
+    });
+  }
+
+  checks.push({
+    label: t('health.checks.protein.label'),
+    detail:
+      proteinIntake === 'high'
+        ? t('health.proteinHigh')
+        : proteinIntake === 'medium'
+          ? t('health.proteinMedium')
+          : proteinIntake === 'low'
+            ? t('health.proteinLow')
+            : t('health.checks.protein.unavailable'),
+    state:
+      proteinIntake === 'high'
+        ? 'positive'
+        : proteinIntake === 'medium'
+          ? 'caution'
+          : proteinIntake === 'low'
+            ? 'negative'
+            : 'unknown',
+  });
+
+  checks.push({
+    label: t('health.checks.nova.label'),
+    detail: novaGroup
+      ? t('health.checks.nova.detail', { group: novaGroup })
+      : t('health.checks.nova.unavailable'),
+    state: novaGroup
+      ? novaGroup <= 2
+        ? 'positive'
+        : novaGroup === 3
+          ? 'caution'
+          : 'negative'
+      : 'unknown',
+  });
+
+  return checks;
 }
 
 export function getHealthReason(product: OpenFoodFactsProduct | undefined, t: TFunction): string {
