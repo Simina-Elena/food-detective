@@ -107,7 +107,9 @@ const REFINED_FLOUR_PATTERNS = [
   /\brefined flour\b/,
   /\bwheat flour\b/,
   /\benriched wheat flour\b/,
-  /\bflour\b/
+  /\bwhite wheat flour\b/,
+  /\ball purpose flour\b/,
+  /\bplain flour\b/,
 ];
 
 const PALM_OIL_PATTERNS = [
@@ -220,7 +222,7 @@ function hasLowFiberToCarbRatio(product?: OpenFoodFactsProduct): boolean | null 
   const carbohydrates = product?.nutriments?.carbohydrates_100g;
   const fiber = product?.nutriments?.fiber_100g;
 
-  if (typeof carbohydrates !== 'number' || typeof fiber !== 'number') {
+  if (typeof carbohydrates !== 'number' || typeof fiber !== 'number' || isNaN(carbohydrates) || isNaN(fiber)) {
     return null;
   }
 
@@ -238,9 +240,9 @@ function proteinIntake(product?: OpenFoodFactsProduct): 'high' | 'medium' | 'low
     return null;
   }
 
-  if (proteins > 10) {
+  if (proteins >= 10) {
     return 'high';
-  } else if (proteins < 10 && proteins >= 5) {
+  } else if (proteins >= 5) {
     return 'medium';
   }
   return 'low';
@@ -274,9 +276,17 @@ function saturatedFatLevel(product?: OpenFoodFactsProduct): 'low' | 'medium' | '
 
 // Informational only: low ≤ 100 kcal, medium 100–350 kcal, high > 350 kcal per 100g
 function caloriesLevel(product?: OpenFoodFactsProduct): 'low' | 'medium' | 'high' | null {
-  const kcal = product?.nutriments?.['energy-kcal_100g'];
+  const rawKcal = product?.nutriments?.['energy-kcal_100g'];
+  const rawKj = product?.nutriments?.['energy-kj_100g'];
 
-  if (typeof kcal !== 'number') {
+  const kcal =
+    typeof rawKcal === 'number' && !isNaN(rawKcal)
+      ? rawKcal
+      : typeof rawKj === 'number' && !isNaN(rawKj)
+        ? rawKj / 4.184
+        : null;
+
+  if (kcal === null) {
     return null;
   }
 
@@ -294,7 +304,7 @@ function countAdditives(product?: OpenFoodFactsProduct): number | null {
   const matches = text.match(/\be\s*\d{3,4}\b/g);
   if (!matches) return 0;
 
-  const unique = new Set(matches.map((m) => m.replace(/\s/, '')));
+  const unique = new Set(matches.map((m) => m.replace(/\s/g, '')));
   return unique.size;
 }
 
