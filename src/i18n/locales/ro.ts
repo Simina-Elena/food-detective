@@ -99,6 +99,21 @@ const ro = {
     proteinHigh: 'Are o cantitate bună de proteine.',
     proteinMedium: 'Are o cantitate moderată de proteine.',
     proteinLow: 'Are puține proteine.',
+    saltLow: 'Conținut scăzut de sare.',
+    saltMedium: 'Conținut moderat de sare.',
+    saltHigh: 'Conținut ridicat de sare.',
+    saturatedFatLow: 'Grăsimi saturate scăzute.',
+    saturatedFatMedium: 'Grăsimi saturate moderate.',
+    saturatedFatHigh: 'Conținut ridicat de grăsimi saturate.',
+    caloriesLow: 'Densitate calorică scăzută.',
+    caloriesMedium: 'Densitate calorică moderată.',
+    caloriesHigh: 'Densitate calorică ridicată.',
+    additivesNone: 'Nu s-au detectat aditivi.',
+    additivesFound: '{{count}} aditiv(i) detectat(i).',
+    palmOilPresent: 'Uleiul de palmier apare în lista de ingrediente.',
+    palmOilAbsent: 'Nu s-a detectat ulei de palmier.',
+    sweetenersPresent: 'Au fost detectați îndulcitori artificiali.',
+    sweetenersAbsent: 'Nu s-au detectat îndulcitori artificiali.',
     checks: {
       nutriScore: {
         label: 'Scor nutrițional',
@@ -116,6 +131,30 @@ const ro = {
       protein: {
         label: 'Proteine',
         unavailable: 'Lipsesc datele despre proteine pentru acest produs.',
+      },
+      salt: {
+        label: 'Sare',
+        unavailable: 'Lipsesc datele despre sare pentru acest produs.',
+      },
+      saturatedFat: {
+        label: 'Grăsimi saturate',
+        unavailable: 'Lipsesc datele despre grăsimi saturate pentru acest produs.',
+      },
+      calories: {
+        label: 'Densitate calorică',
+        unavailable: 'Lipsesc datele calorice pentru acest produs.',
+      },
+      additives: {
+        label: 'Aditivi',
+        unavailable: 'Nu pot verifica aditivii fără lista de ingrediente.',
+      },
+      palmOil: {
+        label: 'Ulei de palmier',
+        unavailable: 'Nu pot verifica uleiul de palmier fără lista de ingrediente.',
+      },
+      sweeteners: {
+        label: 'Îndulcitori',
+        unavailable: 'Nu pot verifica îndulcitorii fără lista de ingrediente.',
       },
       nova: {
         label: 'Nivel de procesare',

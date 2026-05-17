@@ -99,6 +99,21 @@ const en = {
     proteinHigh: 'Good amount of protein.',
     proteinMedium: 'Moderate amount of protein.',
     proteinLow: 'Low amount of protein.',
+    saltLow: 'Salt level is low.',
+    saltMedium: 'Salt level is moderate.',
+    saltHigh: 'Salt level is high.',
+    saturatedFatLow: 'Low saturated fat.',
+    saturatedFatMedium: 'Moderate saturated fat.',
+    saturatedFatHigh: 'High saturated fat.',
+    caloriesLow: 'Low caloric density.',
+    caloriesMedium: 'Moderate caloric density.',
+    caloriesHigh: 'High caloric density.',
+    additivesNone: 'No additives detected.',
+    additivesFound: '{{count}} additive(s) detected.',
+    palmOilPresent: 'Palm oil is in the ingredient list.',
+    palmOilAbsent: 'No palm oil detected.',
+    sweetenersPresent: 'Artificial sweeteners detected.',
+    sweetenersAbsent: 'No artificial sweeteners detected.',
     checks: {
       nutriScore: {
         label: 'Nutrition score',
@@ -116,6 +131,30 @@ const en = {
       protein: {
         label: 'Protein',
         unavailable: 'Protein data is missing for this product.',
+      },
+      salt: {
+        label: 'Salt',
+        unavailable: 'Salt data is missing for this product.',
+      },
+      saturatedFat: {
+        label: 'Saturated fat',
+        unavailable: 'Saturated fat data is missing for this product.',
+      },
+      calories: {
+        label: 'Caloric density',
+        unavailable: 'Calorie data is missing for this product.',
+      },
+      additives: {
+        label: 'Additives',
+        unavailable: 'Could not check additives without an ingredient list.',
+      },
+      palmOil: {
+        label: 'Palm oil',
+        unavailable: 'Could not check for palm oil without an ingredient list.',
+      },
+      sweeteners: {
+        label: 'Sweeteners',
+        unavailable: 'Could not check for sweeteners without an ingredient list.',
       },
       nova: {
         label: 'Processing level',
