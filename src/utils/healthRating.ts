@@ -11,6 +11,12 @@ type HealthAnalysis = {
   hasLowFiberRatio: boolean | null;
   hasWholeGrainMismatch: boolean | null;
   proteinIntake: 'high' | 'medium' | 'low' | null;
+  saltLevel: 'low' | 'medium' | 'high' | null;
+  saturatedFatLevel: 'low' | 'medium' | 'high' | null;
+  caloriesLevel: 'low' | 'medium' | 'high' | null;
+  additiveCount: number | null;
+  hasPalmOil: boolean | null;
+  hasArtificialSweeteners: boolean | null;
 };
 
 export type CoachRecommendation = {
@@ -102,6 +108,27 @@ const REFINED_FLOUR_PATTERNS = [
   /\bwheat flour\b/,
   /\benriched wheat flour\b/,
   /\bflour\b/
+];
+
+const PALM_OIL_PATTERNS = [
+  /\bpalm oil\b/,
+  /\bpalm fat\b/,
+  /\bpalm kernel oil\b/,
+  /\bpalm kernel fat\b/,
+  /\bpalm olein\b/,
+  /\bpalm stearin\b/,
+];
+
+const ARTIFICIAL_SWEETENER_PATTERNS = [
+  /\baspartame\b/,
+  /\bacesulfame\b/,
+  /\bsucralose\b/,
+  /\bsaccharin\b/,
+  /\bcyclamate\b/,
+  /\bstevia\b/,
+  /\bsteviol\b/,
+  /\bneotame\b/,
+  /\badvantame\b/,
 ];
 
 function getIngredientsText(product?: OpenFoodFactsProduct): string | undefined {
@@ -219,6 +246,82 @@ function proteinIntake(product?: OpenFoodFactsProduct): 'high' | 'medium' | 'low
   return 'low';
 }
 
+// EU traffic light thresholds for salt: low ≤ 0.3g, medium 0.3–1.5g, high > 1.5g per 100g
+function saltLevel(product?: OpenFoodFactsProduct): 'low' | 'medium' | 'high' | null {
+  const salt = product?.nutriments?.salt_100g;
+
+  if (typeof salt !== 'number') {
+    return null;
+  }
+
+  if (salt > 1.5) return 'high';
+  if (salt > 0.3) return 'medium';
+  return 'low';
+}
+
+// EU traffic light thresholds for saturated fat: low ≤ 1.5g, medium 1.5–5g, high > 5g per 100g
+function saturatedFatLevel(product?: OpenFoodFactsProduct): 'low' | 'medium' | 'high' | null {
+  const satFat = product?.nutriments?.['saturated-fat_100g'];
+
+  if (typeof satFat !== 'number') {
+    return null;
+  }
+
+  if (satFat > 5) return 'high';
+  if (satFat > 1.5) return 'medium';
+  return 'low';
+}
+
+// Informational only: low ≤ 100 kcal, medium 100–350 kcal, high > 350 kcal per 100g
+function caloriesLevel(product?: OpenFoodFactsProduct): 'low' | 'medium' | 'high' | null {
+  const kcal = product?.nutriments?.['energy-kcal_100g'];
+
+  if (typeof kcal !== 'number') {
+    return null;
+  }
+
+  if (kcal > 350) return 'high';
+  if (kcal > 100) return 'medium';
+  return 'low';
+}
+
+// Count distinct E-numbers in raw ingredient text (uses raw lowercase to preserve parenthesised codes)
+function countAdditives(product?: OpenFoodFactsProduct): number | null {
+  const ingredientsText = getIngredientsText(product);
+  if (!ingredientsText) return null;
+
+  const text = ingredientsText.toLowerCase();
+  const matches = text.match(/\be\s*\d{3,4}\b/g);
+  if (!matches) return 0;
+
+  const unique = new Set(matches.map((m) => m.replace(/\s/, '')));
+  return unique.size;
+}
+
+function detectPalmOil(product?: OpenFoodFactsProduct): boolean | null {
+  const ingredientsText = getIngredientsText(product);
+  if (!ingredientsText) return null;
+
+  const text = ingredientsText.toLowerCase();
+  return PALM_OIL_PATTERNS.some((pattern) => pattern.test(text));
+}
+
+function detectArtificialSweeteners(product?: OpenFoodFactsProduct): boolean | null {
+  const ingredientsText = getIngredientsText(product);
+  if (!ingredientsText) return null;
+
+  const text = ingredientsText.toLowerCase();
+
+  // Check named sweeteners
+  if (ARTIFICIAL_SWEETENER_PATTERNS.some((pattern) => pattern.test(text))) {
+    return true;
+  }
+
+  // Check E-numbers for common sweeteners: E950–E962, E969
+  const sweetenerENumbers = /\be\s*9(?:5[0-9]|6[0-2]|69)\b/;
+  return sweetenerENumbers.test(text);
+}
+
 function analyzeHealth(product?: OpenFoodFactsProduct): HealthAnalysis {
   const grade = product?.nutrition_grades ?? product?.nutriscore_data?.grade;
 
@@ -228,14 +331,26 @@ function analyzeHealth(product?: OpenFoodFactsProduct): HealthAnalysis {
     hasLowFiberRatio: hasLowFiberToCarbRatio(product),
     hasWholeGrainMismatch: hasWholeGrainMarketingMismatch(product),
     proteinIntake: proteinIntake(product),
+    saltLevel: saltLevel(product),
+    saturatedFatLevel: saturatedFatLevel(product),
+    caloriesLevel: caloriesLevel(product),
+    additiveCount: countAdditives(product),
+    hasPalmOil: detectPalmOil(product),
+    hasArtificialSweeteners: detectArtificialSweeteners(product),
   };
 }
 
 export function getHealthVerdict(product?: OpenFoodFactsProduct): HealthVerdict {
-  const { grade, hasSugarInFirstFive, hasLowFiberRatio, hasWholeGrainMismatch } =
+  const { grade, hasSugarInFirstFive, hasLowFiberRatio, hasWholeGrainMismatch, saltLevel, saturatedFatLevel } =
     analyzeHealth(product);
 
-  if (hasSugarInFirstFive || hasLowFiberRatio || hasWholeGrainMismatch) {
+  if (
+    hasSugarInFirstFive ||
+    hasLowFiberRatio ||
+    hasWholeGrainMismatch ||
+    saltLevel === 'high' ||
+    saturatedFatLevel === 'high'
+  ) {
     return 'not healthy';
   }
 
@@ -264,6 +379,10 @@ export function getCoachRecommendation(
     analysis.hasSugarInFirstFive,
     analysis.hasLowFiberRatio,
     analysis.hasWholeGrainMismatch,
+    analysis.saltLevel === 'high',
+    analysis.saturatedFatLevel === 'high',
+    analysis.additiveCount !== null && analysis.additiveCount >= 3,
+    analysis.hasPalmOil,
   ].filter((check) => check === true).length;
 
   if (verdict === 'healthy') {
@@ -305,8 +424,19 @@ export function getHealthChecks(
   product: OpenFoodFactsProduct | undefined,
   t: TFunction,
 ): HealthCheck[] {
-  const { grade, hasSugarInFirstFive, hasLowFiberRatio, hasWholeGrainMismatch, proteinIntake } =
-    analyzeHealth(product);
+  const {
+    grade,
+    hasSugarInFirstFive,
+    hasLowFiberRatio,
+    hasWholeGrainMismatch,
+    proteinIntake,
+    saltLevel,
+    saturatedFatLevel,
+    caloriesLevel,
+    additiveCount,
+    hasPalmOil,
+    hasArtificialSweeteners,
+  } = analyzeHealth(product);
   const novaGroup = product?.nova_group;
   const checks: HealthCheck[] = [];
 
@@ -375,6 +505,116 @@ export function getHealthChecks(
   });
 
   checks.push({
+    label: t('health.checks.salt.label'),
+    detail:
+      saltLevel === 'low'
+        ? t('health.saltLow')
+        : saltLevel === 'medium'
+          ? t('health.saltMedium')
+          : saltLevel === 'high'
+            ? t('health.saltHigh')
+            : t('health.checks.salt.unavailable'),
+    state:
+      saltLevel === 'low'
+        ? 'positive'
+        : saltLevel === 'medium'
+          ? 'caution'
+          : saltLevel === 'high'
+            ? 'negative'
+            : 'unknown',
+  });
+
+  checks.push({
+    label: t('health.checks.saturatedFat.label'),
+    detail:
+      saturatedFatLevel === 'low'
+        ? t('health.saturatedFatLow')
+        : saturatedFatLevel === 'medium'
+          ? t('health.saturatedFatMedium')
+          : saturatedFatLevel === 'high'
+            ? t('health.saturatedFatHigh')
+            : t('health.checks.saturatedFat.unavailable'),
+    state:
+      saturatedFatLevel === 'low'
+        ? 'positive'
+        : saturatedFatLevel === 'medium'
+          ? 'caution'
+          : saturatedFatLevel === 'high'
+            ? 'negative'
+            : 'unknown',
+  });
+
+  checks.push({
+    label: t('health.checks.calories.label'),
+    detail:
+      caloriesLevel === 'low'
+        ? t('health.caloriesLow')
+        : caloriesLevel === 'medium'
+          ? t('health.caloriesMedium')
+          : caloriesLevel === 'high'
+            ? t('health.caloriesHigh')
+            : t('health.checks.calories.unavailable'),
+    state:
+      caloriesLevel === 'low'
+        ? 'positive'
+        : caloriesLevel === 'medium'
+          ? 'positive'
+          : caloriesLevel === 'high'
+            ? 'caution'
+            : 'unknown',
+  });
+
+  checks.push({
+    label: t('health.checks.additives.label'),
+    detail:
+      additiveCount === null
+        ? t('health.checks.additives.unavailable')
+        : additiveCount === 0
+          ? t('health.additivesNone')
+          : t('health.additivesFound', { count: additiveCount }),
+    state:
+      additiveCount === null
+        ? 'unknown'
+        : additiveCount === 0
+          ? 'positive'
+          : additiveCount <= 2
+            ? 'caution'
+            : 'negative',
+  });
+
+  checks.push({
+    label: t('health.checks.palmOil.label'),
+    detail:
+      hasPalmOil === true
+        ? t('health.palmOilPresent')
+        : hasPalmOil === false
+          ? t('health.palmOilAbsent')
+          : t('health.checks.palmOil.unavailable'),
+    state:
+      hasPalmOil === true
+        ? 'negative'
+        : hasPalmOil === false
+          ? 'positive'
+          : 'unknown',
+  });
+
+  checks.push({
+    label: t('health.checks.sweeteners.label'),
+    detail:
+      hasArtificialSweeteners === true
+        ? t('health.sweetenersPresent')
+        : hasArtificialSweeteners === false
+          ? t('health.sweetenersAbsent')
+          : t('health.checks.sweeteners.unavailable'),
+    state:
+      hasArtificialSweeteners === true
+        ? 'caution'
+        : hasArtificialSweeteners === false
+          ? 'positive'
+          : 'unknown',
+  });
+
+  checks.push({
     label: t('health.checks.nova.label'),
     detail: novaGroup
       ? t('health.checks.nova.detail', { group: novaGroup })
@@ -392,8 +632,17 @@ export function getHealthChecks(
 }
 
 export function getHealthReason(product: OpenFoodFactsProduct | undefined, t: TFunction): string {
-  const { grade, hasSugarInFirstFive, hasLowFiberRatio, hasWholeGrainMismatch, proteinIntake } =
-    analyzeHealth(product);
+  const {
+    grade,
+    hasSugarInFirstFive,
+    hasLowFiberRatio,
+    hasWholeGrainMismatch,
+    proteinIntake,
+    saltLevel,
+    saturatedFatLevel,
+    hasPalmOil,
+    hasArtificialSweeteners,
+  } = analyzeHealth(product);
   const reasons: string[] = [];
 
   if (grade) {
@@ -434,6 +683,24 @@ export function getHealthReason(product: OpenFoodFactsProduct | undefined, t: TF
           ? t('health.proteinMedium')
           : t('health.proteinLow'),
     );
+  }
+
+  if (saltLevel === 'high') {
+    reasons.push(t('health.saltHigh'));
+  } else if (saltLevel === 'medium') {
+    reasons.push(t('health.saltMedium'));
+  }
+
+  if (saturatedFatLevel === 'high') {
+    reasons.push(t('health.saturatedFatHigh'));
+  }
+
+  if (hasPalmOil === true) {
+    reasons.push(t('health.palmOilPresent'));
+  }
+
+  if (hasArtificialSweeteners === true) {
+    reasons.push(t('health.sweetenersPresent'));
   }
 
   return reasons.join(' ');
