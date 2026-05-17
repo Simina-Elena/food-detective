@@ -17,6 +17,7 @@ export type OpenFoodFactsProduct = {
     salt_100g?: number;
     'saturated-fat_100g'?: number;
     'energy-kcal_100g'?: number;
+    'energy-kj_100g'?: number;
   };
   nova_group?: number;
   quantity?: string;
