@@ -47,6 +47,11 @@ const ro = {
       checksTitle: 'Ce am verificat',
       notAvailable: 'N/A',
       novaLabel: 'NOVA {{group}}',
+      missingIngredients: {
+        notice: 'Lista de ingrediente lipsește din baza de date',
+        detail: 'Ingredientele acestui produs nu au fost adăugate încă în Open Food Facts. Verificările bazate pe ingrediente nu sunt disponibile.',
+        addButton: 'Adaugă ingrediente',
+      },
       verdict: {
         healthy: 'Sănătos',
         notHealthy: 'De evitat zilnic',

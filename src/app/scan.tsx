@@ -23,7 +23,7 @@ import {
   type OpenFoodFactsProduct,
 } from '@/api/openFoodFacts';
 import { getCurrentLanguage } from '@/i18n';
-import { getCoachRecommendation, getHealthChecks } from '@/utils/healthRating';
+import { getHealthObject, hasIngredientData } from '@/utils/healthRating';
 
 type LookupState =
     | { status: 'idle' }
@@ -95,9 +95,8 @@ export default function Scan() {
   }
 
   const scannedProduct = lookupState.status === 'success' ? lookupState.product : undefined;
-  const grade = scannedProduct?.nutrition_grades ?? scannedProduct?.nutriscore_data?.grade;
-  const recommendation = getCoachRecommendation(scannedProduct, t);
-  const healthChecks = getHealthChecks(scannedProduct, t);
+  const ingredientDataAvailable = hasIngredientData(scannedProduct);
+  const healthObj = getHealthObject(scannedProduct, t);
 
   return (
     <SafeAreaView style={styles.screen}>
@@ -167,27 +166,42 @@ export default function Scan() {
                 </View>
               </View>
 
-              <View
-                style={[
-                  styles.coachNote,
-                  recommendation.level === 'good_match'
-                    ? styles.coachGood
-                    : recommendation.level === 'compare'
-                      ? styles.coachCompare
-                      : recommendation.level === 'occasional'
-                        ? styles.coachOccasional
-                        : styles.coachUnknown,
-                ]}>
-                <Text style={styles.coachLabel}>{t('coach.title')}</Text>
-                <Text style={styles.coachTitle}>{recommendation.title}</Text>
-                <Text style={styles.coachText}>{recommendation.body}</Text>
-                <Text style={styles.coachAction}>{recommendation.action}</Text>
-              </View>
+              {ingredientDataAvailable ? (
+                <View
+                  style={[
+                    styles.coachNote,
+                    healthObj.recommendation.level === 'good_match'
+                      ? styles.coachGood
+                      : healthObj.recommendation.level === 'compare'
+                        ? styles.coachCompare
+                        : healthObj.recommendation.level === 'occasional'
+                          ? styles.coachOccasional
+                          : styles.coachUnknown,
+                  ]}>
+                  <Text style={styles.coachLabel}>{t('coach.title')}</Text>
+                  <Text style={styles.coachTitle}>{healthObj.recommendation.title}</Text>
+                  <Text style={styles.coachText}>{healthObj.recommendation.body}</Text>
+                  <Text style={styles.coachAction}>{healthObj.recommendation.action}</Text>
+                </View>
+              ) : (
+                <>
+                  <View style={[styles.coachNote, styles.coachUnknown]}>
+                    <Text style={styles.coachLabel}>{t('coach.title')}</Text>
+                    <Text style={styles.coachTitle}>{t('scan.result.missingIngredients.notice')}</Text>
+                    <Text style={styles.coachText}>{t('scan.result.missingIngredients.detail')}</Text>
+                  </View>
+                  <Pressable style={styles.addIngredientsButton}>
+                    <Text style={styles.addIngredientsButtonText}>{t('scan.result.missingIngredients.addButton')}</Text>
+                  </Pressable>
+                </>
+              )}
 
+              {ingredientDataAvailable && (
+              <>
               <View style={styles.checkSection}>
                 <Text style={styles.sectionTitle}>{t('scan.result.checksTitle')}</Text>
-                {healthChecks.map((check) => (
-                  <View key={check.label} style={styles.checkItem}>
+                {healthObj.healthChecks.map((check) => (
+                  <View key={check.id} style={styles.checkItem}>
                     <View
                       style={[
                         styles.checkMarker,
@@ -211,7 +225,7 @@ export default function Scan() {
               <Text style={styles.metaText}>
                 {[
                   `${t('scan.result.nutriScoreLabel')}: ${
-                    grade ? grade.toUpperCase() : t('scan.result.notAvailable')
+                      healthObj.grade ? healthObj.grade.toUpperCase() : t('scan.result.notAvailable')
                   }`,
                   scannedProduct?.nova_group
                     ? t('scan.result.novaLabel', { group: scannedProduct.nova_group })
@@ -221,6 +235,9 @@ export default function Scan() {
                   .filter(Boolean)
                   .join(' | ')}
               </Text>
+              </>
+              )}
+
               <Pressable onPress={resetScanner} style={styles.primaryButton}>
                 <Text style={styles.primaryButtonText}>{t('scan.result.scanAnotherProduct')}</Text>
               </Pressable>
@@ -479,6 +496,19 @@ const styles = StyleSheet.create({
   },
   secondaryButtonText: {
     color: '#17211f',
+    fontSize: 15,
+    fontWeight: '700',
+  },
+  addIngredientsButton: {
+    borderWidth: 1,
+    borderColor: '#1f6f5b',
+    borderRadius: 8,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    alignItems: 'center',
+  },
+  addIngredientsButtonText: {
+    color: '#1f6f5b',
     fontSize: 15,
     fontWeight: '700',
   },

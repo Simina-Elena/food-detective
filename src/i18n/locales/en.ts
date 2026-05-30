@@ -47,6 +47,11 @@ const en = {
       checksTitle: 'What I checked',
       notAvailable: 'N/A',
       novaLabel: 'NOVA {{group}}',
+      missingIngredients: {
+        notice: 'Ingredient list not in the database',
+        detail: "This product's ingredients haven't been added to Open Food Facts yet. Ingredient-based checks are not available.",
+        addButton: 'Add ingredients',
+      },
       verdict: {
         healthy: 'Healthy',
         notHealthy: 'Not healthy',
